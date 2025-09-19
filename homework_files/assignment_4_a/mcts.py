@@ -48,7 +48,8 @@ class GameBoard:
         count_2 = sum(cc == 2 for row in bd for cc in row)
         return 1 if count_1 == count_2 else 2
     
-
+    def play_move(self, move):
+        self.entries[move[0]][move[1]] = self.check_nextplayer(self.entries)
     
     def getmoves(self):
         return [(r,c) for r in range(3) for c in range(3) if self.entries[r][c]==0] # all possible position where the board is empty
@@ -168,31 +169,50 @@ class MCTS:
         return best_child.action
 
     
+def get_validated_input(prompt, valid_choices, transform = lambda x: x):
+    while True:
+        try:
+            player_input = transform(input(prompt))
+            if player_input in valid_choices:
+                return player_input
+            else:
+                print(player_input)
+                raise Exception("Invalid Input")
+        except:
+            print("Bad Input, please try again.")
 
 
 if __name__ == "__main__":
+    bd = GameBoard()
+    start_choice = get_validated_input("Choose what you want to play (1, 2): ", [1, 2], lambda x: int(x))
+    if start_choice == 1:
+        player = "human"
+    else:
+        player = "bot"
+
     mcts = MCTS()
-    bd = GameBoard
-    root_node = MCTSNode(bd = root_state, parent= None, action=None)
-
-
-
-def MCTS_move(root_state: GameBoard, iterations=2000):
-    mcts = MCTS()
-    root_node = MCTSNode(bd = root_state, parent= None, action=None)
     
-    best_action = mcts.search(root_node, iter=iterations)
-    player = root_state.check_nextplayer(root_state.entries)
-    next_state = apply_action(root_state, best_action, player)
     
-    return best_action, player, next_state
+    while (state := bd.checkwin()) == 0:
+        if player == "human":
+            move = get_validated_input("Enter your move (x, y): ", bd.getmoves(), lambda x: tuple(map(int, map(str.strip, x.split(',')))))
+            bd.play_move(move)
+            player = "bot"
+        else:
+            
+            root_node = MCTSNode(bd, parent= None, action=None)
+    
+            best_action = mcts.search(root_node, iter=20)
+            print(f"The robot plays {best_action}")
+            next_player = bd.check_nextplayer(bd.entries)
+            bd = apply_action(bd, best_action, next_player)
 
-bd = GameBoard()
-print('-------- before move ----------')
-bd.entries = [[1,0,0],[0,2,0],[0,0,0]]
-bd.print_bd()
-print('-------- after MCTS move ----------')
-best_action, next_player, next_bd = MCTS_move(bd, iterations=2000)
-print("Best action:", best_action, "for player", next_player)
-next_bd.print_bd()
-print('----------------------------------')
+            player = "human"
+        bd.print_bd()
+    if state == 1:
+        print("1 won!")
+    elif state == 2:
+        print("2 won!")
+    else:
+        print("tie!")
+    
